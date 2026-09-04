@@ -1,0 +1,71 @@
+#!/bin/sh
+set -eu
+
+DATA_DIR="${DATA_DIR:-/var/lib/casaos/mihomo-zimaos}"
+PACKAGE_DIR="${PACKAGE_DIR:-/usr/share/mihomo-zimaos}"
+PROFILE_DIR="$DATA_DIR/profiles"
+SECRET_FILE="$DATA_DIR/secrets.env"
+
+install -d -m 0750 "$DATA_DIR" "$PROFILE_DIR"
+
+if [ ! -s "$SECRET_FILE" ]; then
+  umask 077
+  control_token="$(od -An -N 24 -tx1 /dev/urandom | tr -d ' \n')"
+  clash_secret="$(od -An -N 24 -tx1 /dev/urandom | tr -d ' \n')"
+  cat >"$SECRET_FILE" <<EOF
+CONTROL_TOKEN=$control_token
+CLASH_SECRET=$clash_secret
+EOF
+fi
+chmod 0600 "$SECRET_FILE"
+
+if [ -s "$PROFILE_DIR/index.json" ]; then
+  exit 0
+fi
+
+base_id="zimaos-default"
+base_name="ZimaOS Default"
+base_source="$PACKAGE_DIR/default-profile.yaml"
+legacy_config="${LEGACY_CONFIG:-/DATA/AppData/mihomo/config.yaml}"
+
+if [ -s "$legacy_config" ]; then
+  base_id="migrated-config"
+  base_name="Migrated config.yaml"
+  base_source="$legacy_config"
+fi
+
+install -m 0600 "$base_source" "$PROFILE_DIR/$base_id.yaml"
+install -m 0600 "$PACKAGE_DIR/zimaos-system-overlay.yaml" \
+  "$PROFILE_DIR/zimaos-system.yaml"
+
+cat >"$PROFILE_DIR/index.json" <<EOF
+[
+  {
+    "id": "$base_id",
+    "name": "$base_name",
+    "type": "local",
+    "updatedAt": 0
+  },
+  {
+    "id": "zimaos-system",
+    "name": "ZimaOS system overlay",
+    "type": "merge",
+    "enabled": true,
+    "updatedAt": 0
+  }
+]
+EOF
+
+cat >"$PROFILE_DIR/state.json" <<EOF
+{
+  "activeId": "$base_id"
+}
+EOF
+
+if [ "$base_source" = "$legacy_config" ]; then
+  cat "$base_source" "$PACKAGE_DIR/initial-cors-overlay.yaml" >"$DATA_DIR/active.yaml"
+else
+  install -m 0600 "$PACKAGE_DIR/default-active.yaml" "$DATA_DIR/active.yaml"
+fi
+
+chmod 0600 "$PROFILE_DIR/index.json" "$PROFILE_DIR/state.json" "$DATA_DIR/active.yaml"

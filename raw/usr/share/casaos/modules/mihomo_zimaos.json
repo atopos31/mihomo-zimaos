@@ -1,0 +1,29 @@
+{
+  "name": "mihomo_zimaos",
+  "ui": {
+    "name": "mihomo_zimaos",
+    "title": {
+      "en_us": "Mihomo",
+      "zh_cn": "Mihomo 代理"
+    },
+    "prefetch": true,
+    "show": true,
+    "entry": "/modules/mihomo_zimaos/index.html",
+    "icon": "/modules/mihomo_zimaos/appicon.ico",
+    "description": "Mihomo with MetaCubeXD",
+    "formality": {
+      "type": "newtab",
+      "props": {
+        "width": "100vh",
+        "height": "100vh",
+        "hasModalCard": true,
+        "animation": "zoom-in"
+      }
+    }
+  },
+  "services": [
+    {
+      "name": "mihomo-zimaos"
+    }
+  ]
+}

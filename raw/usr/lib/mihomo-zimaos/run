@@ -1,0 +1,30 @@
+#!/bin/sh
+set -eu
+
+DATA_DIR="${DATA_DIR:-/var/lib/casaos/mihomo-zimaos}"
+/usr/lib/mihomo-zimaos/prepare
+
+set -a
+. "$DATA_DIR/secrets.env"
+set +a
+
+host_ip="$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for (i = 1; i <= NF; i++) if ($i == "src") {print $(i + 1); exit}}')"
+if [ -z "$host_ip" ]; then
+  host_ip="$(hostname -I 2>/dev/null | awk '{print $1}')"
+fi
+if [ -n "$host_ip" ]; then
+  export DEFAULT_BACKEND_URL="http://$host_ip:9090"
+fi
+
+export NODE_ENV=production
+export HOST=0.0.0.0
+export PORT=9091
+export CONTROL_PORT=9091
+export CLASH_API_PORT=9090
+export MIXED_PORT=7893
+export DATA_DIR
+export MIHOMO_BIN=/usr/bin/mihomo
+export UI_DIST=/usr/lib/mihomo-zimaos/ui-dist
+
+exec /usr/lib/mihomo-zimaos/node \
+  /usr/lib/mihomo-zimaos/server/server/index.mjs

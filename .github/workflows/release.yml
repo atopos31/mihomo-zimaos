@@ -1,0 +1,121 @@
+name: Build ZimaOS raw package
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: zimaos-release
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout packaging repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends \
+            curl git gzip shellcheck squashfs-tools xz-utils
+
+      - name: Validate packaging skeleton
+        run: |
+          bash -n scripts/build-raw.sh
+          shellcheck scripts/build-raw.sh
+          shellcheck -s sh raw/usr/lib/mihomo-zimaos/prepare
+          shellcheck -s sh raw/usr/lib/mihomo-zimaos/run
+          sh -n raw/usr/lib/mihomo-zimaos/prepare
+          sh -n raw/usr/lib/mihomo-zimaos/run
+          jq empty raw/usr/share/casaos/modules/mihomo_zimaos.json
+          test "$(cat raw/usr/lib/extension-release.d/extension-release.mihomo_zimaos | head -n 1)" = "ID=_any"
+          test_root="$(mktemp -d)"
+          DATA_DIR="$test_root/data" \
+          PACKAGE_DIR="$PWD/raw/usr/share/mihomo-zimaos" \
+          LEGACY_CONFIG="$test_root/not-present.yaml" \
+            raw/usr/lib/mihomo-zimaos/prepare
+          jq -e 'length == 2' "$test_root/data/profiles/index.json"
+          jq -e '.activeId == "zimaos-default"' "$test_root/data/profiles/state.json"
+          test -s "$test_root/data/secrets.env"
+          test -s "$test_root/data/active.yaml"
+
+      - name: Build raw package
+        run: ./scripts/build-raw.sh
+
+      - name: Smoke test bundled server and kernel
+        run: |
+          smoke_root="$(mktemp -d)"
+          CONTROL_TOKEN=smoke-control \
+          CLASH_SECRET=smoke-clash \
+          CONTROL_PORT=19091 \
+          CLASH_API_PORT=19090 \
+          MIXED_PORT=17893 \
+          PORT=19091 \
+          HOST=127.0.0.1 \
+          DATA_DIR="$smoke_root/data" \
+          MIHOMO_BIN="$PWD/.build/raw/usr/bin/mihomo" \
+          UI_DIST="$PWD/.build/raw/usr/lib/mihomo-zimaos/ui-dist" \
+            "$PWD/.build/raw/usr/lib/mihomo-zimaos/node" \
+            "$PWD/.build/raw/usr/lib/mihomo-zimaos/server/server/index.mjs" \
+            >"$smoke_root/server.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:19091/api/control/health >/dev/null; then
+              break
+            fi
+            if ! kill -0 "$server_pid" 2>/dev/null; then
+              cat "$smoke_root/server.log"
+              exit 1
+            fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:19091/api/control/health
+          curl -fsS -H 'Authorization: Bearer smoke-clash' \
+            http://127.0.0.1:19090/version
+
+      - name: Inspect package
+        run: |
+          unsquashfs -s dist/mihomo_zimaos.raw
+          unsquashfs -ll dist/mihomo_zimaos.raw | grep -E \
+            'mihomo-zimaos.service|extension-release.mihomo_zimaos|mihomo_zimaos.json|usr/bin/mihomo|server/index.mjs'
+
+      - name: Publish latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          source versions.env
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git tag --force latest "$GITHUB_SHA"
+          git push origin refs/tags/latest --force
+          if gh release view latest >/dev/null 2>&1; then
+            gh release edit latest \
+              --title "mihomo-zimaos ${PACKAGE_VERSION}" \
+              --notes "Mihomo ${MIHOMO_VERSION}, MetaCubeXD ${METACUBEXD_VERSION}, Node.js ${NODE_VERSION}." \
+              --latest
+          else
+            gh release create latest \
+              --target "$GITHUB_SHA" \
+              --title "mihomo-zimaos ${PACKAGE_VERSION}" \
+              --notes "Mihomo ${MIHOMO_VERSION}, MetaCubeXD ${METACUBEXD_VERSION}, Node.js ${NODE_VERSION}."
+          fi
+          gh release upload latest \
+            dist/mihomo_zimaos.raw \
+            dist/mihomo_zimaos.raw.sha256 \
+            --clobber

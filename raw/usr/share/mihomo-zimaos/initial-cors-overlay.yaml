@@ -1,0 +1,5 @@
+
+external-controller-cors:
+  allow-origins:
+    - "*"
+  allow-private-network: true

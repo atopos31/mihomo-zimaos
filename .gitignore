@@ -1,0 +1,7 @@
+.build/
+dist/
+*.raw
+local-config.yaml
+config.yaml
+secrets.env
+.DS_Store
