@@ -1,0 +1,77 @@
+#!/bin/sh
+set -eu
+
+DATA_DIR="${DATA_DIR:-/var/lib/casaos/mihomo-zimaos}"
+TUN_DEVICE="${TUN_DEVICE:-Mihomo}"
+ROUTE_TABLE="${DNS_ROUTE_TABLE:-20230}"
+TCP_PRIORITY="${DNS_TCP_RULE_PRIORITY:-8990}"
+UDP_PRIORITY="${DNS_UDP_RULE_PRIORITY:-8991}"
+if [ -z "${IP_BIN:-}" ]; then
+  IP_BIN="$(command -v ip)"
+fi
+
+remove_rule() {
+  priority="$1"
+  protocol="$2"
+  while "$IP_BIN" -4 rule del priority "$priority" \
+    ipproto "$protocol" dport 53 lookup "$ROUTE_TABLE" 2>/dev/null; do
+    :
+  done
+}
+
+cleanup() {
+  remove_rule "$TCP_PRIORITY" tcp
+  remove_rule "$UDP_PRIORITY" udp
+  "$IP_BIN" -4 route flush table "$ROUTE_TABLE" 2>/dev/null || true
+}
+
+stop() {
+  cleanup
+  exit 0
+}
+
+if [ "${1:-}" = "--cleanup" ]; then
+  cleanup
+  exit 0
+fi
+
+trap cleanup EXIT
+trap stop HUP INT TERM
+configured_ifindex=""
+cleanup
+
+while :; do
+  if "$IP_BIN" link show "$TUN_DEVICE" >/dev/null 2>&1 \
+    && [ -r "$DATA_DIR/active.yaml" ] \
+    && grep -q '^[[:space:]]*dns-hijack:' "$DATA_DIR/active.yaml"; then
+    current_ifindex="$(cat "/sys/class/net/$TUN_DEVICE/ifindex")"
+    gateway="$("$IP_BIN" -4 route show table all dev "$TUN_DEVICE" \
+      | awk '{for (i = 1; i <= NF; i++) if ($i == "via") {print $(i + 1); exit}}')"
+
+    if [ -n "$gateway" ]; then
+      if [ "$configured_ifindex" != "$current_ifindex" ]; then
+        cleanup
+        configured_ifindex="$current_ifindex"
+      fi
+
+      "$IP_BIN" -4 route replace default via "$gateway" \
+        dev "$TUN_DEVICE" table "$ROUTE_TABLE"
+      "$IP_BIN" -4 rule show \
+        | grep -Eq "^${TCP_PRIORITY}:.*ipproto tcp.*dport 53.*lookup ${ROUTE_TABLE}$" \
+        || "$IP_BIN" -4 rule add priority "$TCP_PRIORITY" \
+          ipproto tcp dport 53 lookup "$ROUTE_TABLE"
+      "$IP_BIN" -4 rule show \
+        | grep -Eq "^${UDP_PRIORITY}:.*ipproto udp.*dport 53.*lookup ${ROUTE_TABLE}$" \
+        || "$IP_BIN" -4 rule add priority "$UDP_PRIORITY" \
+          ipproto udp dport 53 lookup "$ROUTE_TABLE"
+    elif [ -n "$configured_ifindex" ]; then
+      cleanup
+      configured_ifindex=""
+    fi
+  elif [ -n "$configured_ifindex" ]; then
+    cleanup
+    configured_ifindex=""
+  fi
+
+  sleep 2
+done

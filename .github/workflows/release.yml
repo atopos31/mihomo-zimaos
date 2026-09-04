@@ -40,8 +40,10 @@ jobs:
           shellcheck scripts/build-raw.sh
           shellcheck -s sh raw/usr/lib/mihomo-zimaos/prepare
           shellcheck -s sh raw/usr/lib/mihomo-zimaos/run
+          shellcheck -s sh raw/usr/lib/mihomo-zimaos/dns-route-watch
           sh -n raw/usr/lib/mihomo-zimaos/prepare
           sh -n raw/usr/lib/mihomo-zimaos/run
+          sh -n raw/usr/lib/mihomo-zimaos/dns-route-watch
           jq empty raw/usr/share/casaos/modules/mihomo_zimaos.json
           test "$(cat raw/usr/lib/extension-release.d/extension-release.mihomo_zimaos | head -n 1)" = "ID=_any"
           test_root="$(mktemp -d)"

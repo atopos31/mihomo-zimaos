@@ -7,6 +7,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 ExecStart=/usr/lib/mihomo-zimaos/run
+ExecStopPost=/usr/lib/mihomo-zimaos/dns-route-watch --cleanup
 Restart=always
 RestartSec=3
 KillMode=control-group

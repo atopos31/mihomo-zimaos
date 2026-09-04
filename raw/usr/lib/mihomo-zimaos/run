@@ -27,5 +27,7 @@ export DATA_DIR
 export MIHOMO_BIN=/usr/bin/mihomo
 export UI_DIST=/usr/lib/mihomo-zimaos/ui-dist
 
+/usr/lib/mihomo-zimaos/dns-route-watch &
+
 exec /usr/lib/mihomo-zimaos/node \
   /usr/lib/mihomo-zimaos/server/server/index.mjs

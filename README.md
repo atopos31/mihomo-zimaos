@@ -88,6 +88,8 @@ services:
 
 `1.1.1.1:53` 和 `8.8.8.8:53` 会被 Mihomo 的 `dns-hijack` 接管并返回 Fake-IP。局域网地址仍通过 `route-exclude-address` 直连。
 
+部分局域网 DNS 本身也会返回其他代理实例生成的 Fake-IP。应用会在 `Mihomo` TUN 启用且配置包含 `dns-hijack` 时，临时添加仅匹配 TCP/UDP 53 的策略路由，确保宿主机 DNS 由当前 Mihomo 实例处理。该机制不修改 `/etc/resolv.conf` 或 NetworkManager 配置，并会在 TUN 关闭或服务停止时自动清理。
+
 ## 数据目录
 
 `.raw` 扩展以只读方式挂载。所有可写数据保存在：

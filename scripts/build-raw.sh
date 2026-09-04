@@ -85,6 +85,7 @@ sed -i "s/@PACKAGE_VERSION@/$PACKAGE_VERSION/g" \
   "$STAGE_DIR/usr/lib/extension-release.d/extension-release.mihomo_zimaos"
 
 chmod 0755 \
+  "$STAGE_DIR/usr/lib/mihomo-zimaos/dns-route-watch" \
   "$STAGE_DIR/usr/lib/mihomo-zimaos/prepare" \
   "$STAGE_DIR/usr/lib/mihomo-zimaos/run"
 
