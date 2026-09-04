@@ -60,6 +60,12 @@ jobs:
       - name: Smoke test bundled server and kernel
         run: |
           smoke_root="$(mktemp -d)"
+          mkdir -p "$smoke_root/data"
+          cat >"$smoke_root/data/active.yaml" <<'EOF'
+          mode: rule
+          rules:
+            - MATCH,DIRECT
+          EOF
           CONTROL_TOKEN=smoke-control \
           CLASH_SECRET=smoke-clash \
           CONTROL_PORT=19091 \
