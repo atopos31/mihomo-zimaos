@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=../versions.env
 source "$ROOT_DIR/versions.env"
 
 BUILD_DIR="${BUILD_DIR:-$ROOT_DIR/.build}"

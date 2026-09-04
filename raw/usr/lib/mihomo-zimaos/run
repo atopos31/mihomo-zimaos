@@ -5,6 +5,7 @@ DATA_DIR="${DATA_DIR:-/var/lib/casaos/mihomo-zimaos}"
 /usr/lib/mihomo-zimaos/prepare
 
 set -a
+# shellcheck source=/dev/null
 . "$DATA_DIR/secrets.env"
 set +a
 
