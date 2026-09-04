@@ -112,6 +112,7 @@ jobs:
 
       - name: Inspect package
         run: |
+          (cd dist && sha256sum -c mihomo_zimaos.raw.sha256)
           unsquashfs -s dist/mihomo_zimaos.raw
           unsquashfs -ll dist/mihomo_zimaos.raw | grep -E \
             'mihomo-zimaos.service|extension-release.mihomo_zimaos|mihomo_zimaos.json|usr/bin/mihomo|server/index.mjs'

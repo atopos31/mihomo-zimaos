@@ -89,6 +89,9 @@ chmod 0755 \
   "$STAGE_DIR/usr/lib/mihomo-zimaos/run"
 
 mksquashfs "$STAGE_DIR" "$OUTPUT_PATH" -noappend
-sha256sum "$OUTPUT_PATH" >"$OUTPUT_PATH.sha256"
+(
+  cd "$DIST_DIR"
+  sha256sum "$(basename "$OUTPUT_PATH")" >"$(basename "$OUTPUT_PATH").sha256"
+)
 
 echo "built $OUTPUT_PATH"
