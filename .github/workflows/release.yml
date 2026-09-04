@@ -86,8 +86,18 @@ jobs:
             sleep 1
           done
           curl -fsS http://127.0.0.1:19091/api/control/health
-          curl -fsS -H 'Authorization: Bearer smoke-clash' \
-            http://127.0.0.1:19090/version
+          for attempt in $(seq 1 60); do
+            if curl -fsS -H 'Authorization: Bearer smoke-clash' \
+              http://127.0.0.1:19090/version; then
+              exit 0
+            fi
+            if ! kill -0 "$server_pid" 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          cat "$smoke_root/server.log"
+          exit 1
 
       - name: Inspect package
         run: |
