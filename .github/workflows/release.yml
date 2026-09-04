@@ -71,6 +71,7 @@ jobs:
           CONTROL_PORT=19091 \
           CLASH_API_PORT=19090 \
           MIXED_PORT=17893 \
+          DEFAULT_BACKEND_URL=http://127.0.0.1:19090 \
           PORT=19091 \
           HOST=127.0.0.1 \
           DATA_DIR="$smoke_root/data" \
@@ -92,6 +93,10 @@ jobs:
             sleep 1
           done
           curl -fsS http://127.0.0.1:19091/api/control/health
+          curl -fsS http://127.0.0.1:19091/config.js \
+            | grep -F '"controlToken":"smoke-control"'
+          curl -fsS http://127.0.0.1:19091/config.js \
+            | grep -F '"defaultBackendURL":"http://127.0.0.1:19090"'
           for attempt in $(seq 1 60); do
             if curl -fsS -H 'Authorization: Bearer smoke-clash' \
               http://127.0.0.1:19090/version; then

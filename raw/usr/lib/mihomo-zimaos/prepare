@@ -50,7 +50,7 @@ cat >"$PROFILE_DIR/index.json" <<EOF
     "id": "zimaos-system",
     "name": "ZimaOS system overlay",
     "type": "merge",
-    "enabled": true,
+    "enabled": false,
     "updatedAt": 0
   }
 ]

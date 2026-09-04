@@ -9,6 +9,8 @@ BUILD_DIR="${BUILD_DIR:-$ROOT_DIR/.build}"
 SOURCE_DIR="$BUILD_DIR/metacubexd"
 STAGE_DIR="$BUILD_DIR/raw"
 DOWNLOAD_DIR="$BUILD_DIR/downloads"
+UI_BUILD_DIR="$BUILD_DIR/ui-dist"
+EMPTY_UI_DIR="$BUILD_DIR/empty-ui"
 DIST_DIR="${DIST_DIR:-$ROOT_DIR/dist}"
 OUTPUT_PATH="$DIST_DIR/mihomo_zimaos.raw"
 
@@ -20,7 +22,13 @@ for command_name in curl git gzip mksquashfs node pnpm sha256sum tar xz; do
 done
 
 rm -rf "$BUILD_DIR" "$DIST_DIR"
-mkdir -p "$SOURCE_DIR" "$STAGE_DIR" "$DOWNLOAD_DIR" "$DIST_DIR"
+mkdir -p \
+  "$SOURCE_DIR" \
+  "$STAGE_DIR" \
+  "$DOWNLOAD_DIR" \
+  "$UI_BUILD_DIR" \
+  "$EMPTY_UI_DIR" \
+  "$DIST_DIR"
 cp -a "$ROOT_DIR/raw/." "$STAGE_DIR/"
 
 git clone --filter=blob:none --depth 1 --branch "$METACUBEXD_VERSION" \
@@ -37,7 +45,9 @@ export HUSKY=0
 corepack enable
 pnpm install --frozen-lockfile
 pnpm --filter @metacubexd/ui generate
-pnpm --filter @metacubexd/server... build
+cp -a packages/ui/.output/public/. "$UI_BUILD_DIR/"
+rm -rf apps/server/.output packages/ui/.output
+UI_DIST="$EMPTY_UI_DIR" pnpm --filter @metacubexd/server... build
 popd >/dev/null
 
 mkdir -p \
@@ -61,7 +71,7 @@ cp "$DOWNLOAD_DIR/${NODE_ASSET%.tar.xz}/bin/node" "$STAGE_DIR/usr/lib/mihomo-zim
 chmod 0755 "$STAGE_DIR/usr/lib/mihomo-zimaos/node"
 
 cp -a "$SOURCE_DIR/apps/server/.output" "$STAGE_DIR/usr/lib/mihomo-zimaos/server"
-cp -a "$SOURCE_DIR/packages/ui/.output/public" "$STAGE_DIR/usr/lib/mihomo-zimaos/ui-dist"
+cp -a "$UI_BUILD_DIR" "$STAGE_DIR/usr/lib/mihomo-zimaos/ui-dist"
 cp "$SOURCE_DIR/packages/ui/public/favicon.ico" \
   "$STAGE_DIR/usr/share/casaos/www/modules/mihomo_zimaos/appicon.ico"
 

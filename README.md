@@ -32,9 +32,10 @@ WebUI 地址：`http://<ZimaOS-IP>:9091`
 
 从仓库的 `latest` Release 下载 `mihomo_zimaos.raw`，复制到 ZimaOS 后执行：
 
+`zpkg install` 需要传入下载文件的完整路径，它会自行复制和挂载扩展：
+
 ```bash
-sudo install -m 0644 mihomo_zimaos.raw /var/lib/extensions/mihomo_zimaos.raw
-sudo zpkg install /var/lib/extensions/mihomo_zimaos.raw
+sudo zpkg install "$(realpath mihomo_zimaos.raw)"
 ```
 
 查看状态：
@@ -71,7 +72,7 @@ sudo zpkg install /var/lib/extensions/mihomo_zimaos.raw
 4. 粘贴订阅 URL。
 5. 检查 YAML 后点击 Activate。
 
-应用内置 `ZimaOS system overlay`。它会为所有激活的基础 Profile 合并 TUN、DNS 劫持和 WebUI CORS 设置。若订阅本身已经完整管理这些字段，可以在 Profiles 中禁用或编辑该 overlay。
+应用内置 `ZimaOS system overlay`。它会为所有激活的基础 Profile 合并 TUN、DNS 劫持和 WebUI CORS 设置。为避免在尚未导入可用节点时影响整机网络，该 overlay 在干净安装时默认关闭。确认订阅通过 Mixed Proxy 可用后，再在 Profiles 中启用 overlay 并重新 Activate。若订阅本身已经完整管理这些字段，也可以保持关闭或编辑该 overlay。
 
 ## Docker 容器透明代理
 
